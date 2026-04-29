@@ -1,0 +1,44 @@
+{
+  "name": "com.lokrain.skymapgeneration",
+  "displayName": "Sky Tycoon Map Generation",
+  "version": "0.1.0",
+  "unity": "6000.4",
+  "unityRelease": "0f1",
+  "description": "Replace this with your own description of the package. \n\nFor best results, use this text to summarize: \n\u25aa What the package does \n\u25aa How it can benefit the user \n\nNote: Special formatting characters are supported, including line breaks ('\\n') and bullets ('\\u25AA').",
+  "dependencies": {
+    "com.unity.test-framework": "1.6.0",
+    "com.unity.collections": "6.4.0",
+    "com.unity.burst": "1.8.28",
+    "com.unity.mathematics": "1.3.3"
+  },
+  "author": {
+    "name": "Dimitar Isusov",
+    "url": "https://github.com/veraluxmusic",
+    "email": "veraluxmusic@gmail.com"
+  },
+  "keywords": [
+    "unity",
+    "map-generation",
+    "procedural-generation",
+    "terrain",
+    "height-field",
+    "opensimplex",
+    "fbm",
+    "burst",
+    "jobs",
+    "collections",
+    "mathematics",
+    "transport",
+    "tycoon"
+  ],
+  "documentationUrl": "https://example.com/",
+  "changelogUrl": "https://example.com/changelog.html",
+  "licensesUrl": "https://example.com/licensing.html",
+  "samples": [
+    {
+      "displayName": "OpenSimplex2S fBM Height Field Preview",
+      "description": "Default profile asset for testing the Inspector-based height-field preview workflow.",
+      "path": "Samples/OpenSimplex2SFbmPreview"
+    }
+  ]
+}
