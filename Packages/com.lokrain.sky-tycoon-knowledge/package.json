@@ -1,0 +1,32 @@
+{
+	"name": "com.lokrain.sky-tycoon-knowledge",
+	"displayName": "sky-tycoon-knowledge",
+	"version": "0.1.0",
+	"unity": "6000.4",
+	"unityRelease": "0f1",
+	"description": "Reusable Burst-compatible procedural generation, spatial analysis, field-processing, and map-generation algorithm library for Sky Tycoon.",
+	"dependencies": {
+		"com.unity.test-framework": "1.6.0",
+		"com.unity.collections": "6.4.0",
+		"com.unity.burst": "1.8.28",
+		"com.unity.mathematics": "1.3.3"
+	},
+	"author": {
+		"name": "Dimitar Isusov",
+		"url": "https://github.com/veraluxmusic",
+		"email": "veraluxmusic@gmail.com"
+	},
+	"keywords": [
+		"unity",
+		"burst",
+		"procedural-generation",
+		"map-generation",
+		"spatial-algorithms",
+		"height-field",
+		"terrain",
+		"tycoon"
+	],
+	"changelogUrl": "https://example.com/changelog.html",
+	"documentationUrl": "https://example.com/",
+	"licensesUrl": "https://example.com/licensing.html"
+}

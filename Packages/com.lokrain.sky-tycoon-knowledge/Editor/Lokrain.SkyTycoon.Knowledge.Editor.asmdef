@@ -1,0 +1,18 @@
+{
+    "name": "Lokrain.SkyTycoon.Knowledge.Editor",
+    "rootNamespace": "Lokrain.SkyTycoon.Knowledge.Editor",
+    "references": [
+        "GUID:703bc5518f429a945a703bad5c93972d"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

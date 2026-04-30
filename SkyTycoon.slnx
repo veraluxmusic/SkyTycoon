@@ -1,7 +1,9 @@
 ﻿<Solution>
-  <Project Path="Lokrain.SkyTycoon.MapGeneration.Preview.csproj" />
-  <Project Path="Lokrain.SkyTycoon.MapGeneration.Generation.csproj" />
+  <Project Path="Lokrain.SkyTycoon.MapGeneration.Runtime.Tests.csproj" />
   <Project Path="Lokrain.SkyTycoon.MapGeneration.Editor.csproj" />
-  <Project Path="Lokrain.SkyTycoon.MapGeneration.Domain.csproj" />
-  <Project Path="Lokrain.SkyTycoon.MapGeneration.Authering.csproj" />
+  <Project Path="Lokrain.SkyTycoon.MapGeneration.csproj" />
+  <Project Path="Lokrain.SkyTycoon.Knowledge.Runtime.csproj" />
+  <Project Path="Lokrain.SkyTycoon.Knowledge.Runtime.Tests.csproj" />
+  <Project Path="Lokrain.SkyTycoon.Knowledge.Editor.Tests.csproj" />
+  <Project Path="Lokrain.SkyTycoon.Knowledge.Editor.csproj" />
 </Solution>
