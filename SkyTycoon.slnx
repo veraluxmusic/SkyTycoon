@@ -1,9 +1,8 @@
 ﻿<Solution>
-  <Project Path="Lokrain.SkyTycoon.MapGeneration.Runtime.Tests.csproj" />
-  <Project Path="Lokrain.SkyTycoon.MapGeneration.Editor.csproj" />
-  <Project Path="Lokrain.SkyTycoon.MapGeneration.csproj" />
-  <Project Path="Lokrain.SkyTycoon.Knowledge.Runtime.csproj" />
-  <Project Path="Lokrain.SkyTycoon.Knowledge.Runtime.Tests.csproj" />
-  <Project Path="Lokrain.SkyTycoon.Knowledge.Editor.Tests.csproj" />
-  <Project Path="Lokrain.SkyTycoon.Knowledge.Editor.csproj" />
+  <Project Path="Lokrain.Burstable.csproj" />
+  <Project Path="Lokrain.Burstable.Tests.csproj" />
+  <Project Path="Assembly-CSharp-Editor.csproj" />
+  <Project Path="Lokrain.Burstable.Editor.csproj" />
+  <Project Path="Lokrain.Burstable.Editor.Tests.csproj" />
+  <Project Path="Assembly-CSharp.csproj" />
 </Solution>

@@ -1,0 +1,11 @@
+{
+    "name": "Lokrain.Burstable.Tests",
+    "references": [
+        "Lokrain.Burstable"
+    ],
+    "optionalUnityReferences": [
+        "TestAssemblies"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": []
+}

@@ -1,0 +1,10 @@
+{
+    "name": "Lokrain.Burstable.Editor",
+    "references": [
+      "Lokrain.Burstable"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": []
+}

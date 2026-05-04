@@ -1,0 +1,14 @@
+{
+    "name": "Lokrain.Burstable.Editor.Tests",
+    "references": [
+        "Lokrain.Burstable.Editor",
+        "Lokrain.Burstable"
+    ],
+    "optionalUnityReferences": [
+        "TestAssemblies"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": []
+}
