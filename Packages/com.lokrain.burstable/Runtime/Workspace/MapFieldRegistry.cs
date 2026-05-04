@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 
 namespace Lokrain.Burstable.Workspace
@@ -7,32 +8,31 @@ namespace Lokrain.Burstable.Workspace
     /// Immutable registry of generated map field definitions.
     /// </summary>
     /// <remarks>
-    /// A map field registry owns validated metadata for fields that may exist in a
-    /// <see cref="MapWorkspace"/>. It prevents duplicate identifiers and duplicate symbolic
-    /// names before workspace storage is allocated.
+    /// A field registry owns validated managed metadata for fields that may exist in a
+    /// <see cref="MapWorkspace"/>. It rejects invalid field definitions, duplicate field
+    /// identifiers, and duplicate symbolic names before native storage is allocated.
     ///
-    /// This type is intentionally managed metadata. It is suitable for setup, validation,
-    /// diagnostics, editor tooling, preview configuration, and export. It is not intended to be
-    /// captured by Burst-compiled jobs or used for per-tile hot-path lookups.
+    /// This type is setup metadata. It is suitable for validation, diagnostics, editor tooling,
+    /// previews, export, and tests. It is not intended for Burst jobs or per-tile hot-path
+    /// lookups.
     ///
-    /// Generation paths should resolve field definitions before scheduling work and pass direct
-    /// field storage to jobs.
+    /// The registry is immutable after construction. The supplied definition list is copied.
     /// </remarks>
-    public sealed class MapFieldRegistry
+    public sealed class MapFieldRegistry : IReadOnlyList<MapFieldDefinition>
     {
         private readonly MapFieldDefinition[] definitions;
         private readonly Dictionary<int, int> indexById;
         private readonly Dictionary<string, int> indexByName;
 
         /// <summary>
-        /// Initializes a new immutable field registry from field definitions.
+        /// Initializes a new immutable field registry.
         /// </summary>
-        /// <param name="definitions">Field definitions to include in the registry.</param>
+        /// <param name="definitions">Field definitions to include.</param>
         /// <exception cref="ArgumentNullException">
-        /// Thrown when <paramref name="definitions"/> is null.
+        /// Thrown when <paramref name="definitions"/> is <see langword="null"/>.
         /// </exception>
         /// <exception cref="ArgumentException">
-        /// Thrown when a definition is invalid, when two definitions use the same field
+        /// Thrown when a field definition is invalid, when two definitions use the same field
         /// identifier, or when two definitions use the same symbolic name.
         /// </exception>
         public MapFieldRegistry(IReadOnlyList<MapFieldDefinition> definitions)
@@ -92,6 +92,16 @@ namespace Lokrain.Burstable.Workspace
         /// <exception cref="ArgumentOutOfRangeException">
         /// Thrown when <paramref name="index"/> is outside the registry range.
         /// </exception>
+        public MapFieldDefinition this[int index] => GetAt(index);
+
+        /// <summary>
+        /// Gets the field definition at the specified registry index.
+        /// </summary>
+        /// <param name="index">Zero-based registry index.</param>
+        /// <returns>The field definition at the specified index.</returns>
+        /// <exception cref="ArgumentOutOfRangeException">
+        /// Thrown when <paramref name="index"/> is outside the registry range.
+        /// </exception>
         public MapFieldDefinition GetAt(int index)
         {
             if ((uint)index >= (uint)definitions.Length)
@@ -117,6 +127,20 @@ namespace Lokrain.Burstable.Workspace
         public bool Contains(MapFieldId id)
         {
             return id.IsValid && indexById.ContainsKey(id.Value);
+        }
+
+        /// <summary>
+        /// Determines whether the registry contains a field definition with the specified
+        /// symbolic name.
+        /// </summary>
+        /// <param name="name">Stable symbolic field name.</param>
+        /// <returns>
+        /// <see langword="true"/> when a matching field definition exists; otherwise,
+        /// <see langword="false"/>.
+        /// </returns>
+        public bool ContainsName(string name)
+        {
+            return MapFieldDefinition.IsValidName(name) && indexByName.ContainsKey(name);
         }
 
         /// <summary>
@@ -183,7 +207,7 @@ namespace Lokrain.Burstable.Workspace
             string name,
             out MapFieldDefinition definition)
         {
-            if (string.IsNullOrWhiteSpace(name) ||
+            if (!MapFieldDefinition.IsValidName(name) ||
                 !indexByName.TryGetValue(name, out int index))
             {
                 definition = default;
@@ -200,19 +224,14 @@ namespace Lokrain.Burstable.Workspace
         /// <param name="name">Stable symbolic field name.</param>
         /// <returns>The matching field definition.</returns>
         /// <exception cref="ArgumentException">
-        /// Thrown when <paramref name="name"/> is null, empty, or whitespace.
+        /// Thrown when <paramref name="name"/> is not a valid field name.
         /// </exception>
         /// <exception cref="KeyNotFoundException">
         /// Thrown when no field definition exists for <paramref name="name"/>.
         /// </exception>
         public MapFieldDefinition GetByName(string name)
         {
-            if (string.IsNullOrWhiteSpace(name))
-            {
-                throw new ArgumentException(
-                    "Map field name must not be null, empty, or whitespace.",
-                    nameof(name));
-            }
+            MapFieldDefinition.ValidateName(name);
 
             if (!indexByName.TryGetValue(name, out int index))
             {
@@ -227,14 +246,32 @@ namespace Lokrain.Burstable.Workspace
         /// Copies all field definitions to a new array.
         /// </summary>
         /// <returns>A new array containing the registry's field definitions.</returns>
-        /// <remarks>
-        /// The returned array may be modified by the caller without affecting the registry.
-        /// </remarks>
         public MapFieldDefinition[] ToArray()
         {
             MapFieldDefinition[] copy = new MapFieldDefinition[definitions.Length];
             Array.Copy(definitions, copy, definitions.Length);
             return copy;
+        }
+
+        /// <summary>
+        /// Returns an enumerator over the registry definitions.
+        /// </summary>
+        /// <returns>An enumerator over the registry definitions.</returns>
+        public IEnumerator<MapFieldDefinition> GetEnumerator()
+        {
+            for (int i = 0; i < definitions.Length; i++)
+            {
+                yield return definitions[i];
+            }
+        }
+
+        /// <summary>
+        /// Returns a non-generic enumerator over the registry definitions.
+        /// </summary>
+        /// <returns>A non-generic enumerator over the registry definitions.</returns>
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            return GetEnumerator();
         }
     }
 }

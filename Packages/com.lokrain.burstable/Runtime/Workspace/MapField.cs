@@ -8,16 +8,16 @@ namespace Lokrain.Burstable.Workspace
     /// </summary>
     /// <typeparam name="T">Unmanaged element type stored by the field.</typeparam>
     /// <remarks>
-    /// A map field provides typed access to a contiguous field array owned by a
-    /// <see cref="MapWorkspace"/>. This type does not allocate memory and does not dispose
-    /// memory. Field lifetime is owned by the workspace that created the view.
+    /// A map field view wraps workspace-owned native storage. It does not allocate memory and
+    /// does not dispose memory. The owning <see cref="MapWorkspace"/> controls the lifetime of
+    /// the underlying array.
     ///
-    /// This type intentionally stores only unmanaged field identity and storage data. It does
-    /// not store <see cref="MapFieldDefinition"/> because definitions include managed metadata
-    /// such as symbolic names and are not suitable for Burst or job capture.
+    /// This type intentionally stores field identity and storage data only. It does not store
+    /// <see cref="MapFieldDefinition"/> because definitions contain managed metadata and are not
+    /// suitable for Burst or job capture.
     ///
-    /// The underlying <see cref="NativeArray{T}"/> may be passed directly to jobs when the
-    /// caller owns the required lifetime and dependency safety.
+    /// The default value is an invalid non-created field view. It is useful as a failed
+    /// <c>out</c> parameter result, but it must not be read, written, or scheduled.
     /// </remarks>
     public struct MapField<T>
         where T : unmanaged
@@ -34,16 +34,12 @@ namespace Lokrain.Burstable.Workspace
         /// Thrown when <paramref name="id"/> is invalid.
         /// </exception>
         /// <exception cref="ArgumentException">
-        /// Thrown when <paramref name="valueType"/> is not compatible with
+        /// Thrown when <paramref name="valueType"/> is incompatible with
         /// <typeparamref name="T"/>.
         /// </exception>
         /// <exception cref="InvalidOperationException">
         /// Thrown when <paramref name="values"/> has not been created.
         /// </exception>
-        /// <remarks>
-        /// This constructor is internal because workspaces own field storage and should be the
-        /// only runtime source of field views.
-        /// </remarks>
         internal MapField(
             MapFieldId id,
             MapFieldValueType valueType,
@@ -81,9 +77,6 @@ namespace Lokrain.Burstable.Workspace
         /// <summary>
         /// Gets the number of elements in the field.
         /// </summary>
-        /// <remarks>
-        /// For map-tile fields, this value should match the owning workspace tile count.
-        /// </remarks>
         public int Length => values.IsCreated ? values.Length : 0;
 
         /// <summary>
@@ -92,8 +85,8 @@ namespace Lokrain.Burstable.Workspace
         /// <param name="index">Linear tile index.</param>
         /// <returns>The field value at the specified index.</returns>
         /// <remarks>
-        /// Bounds checking follows the active Unity safety configuration for
-        /// <see cref="NativeArray{T}"/>.
+        /// Bounds checking and disposed-array checking follow Unity's active safety
+        /// configuration for <see cref="NativeArray{T}"/>.
         /// </remarks>
         public T this[int index]
         {
@@ -105,13 +98,17 @@ namespace Lokrain.Burstable.Workspace
         /// Gets the underlying workspace-owned native array.
         /// </summary>
         /// <returns>The underlying native array.</returns>
+        /// <exception cref="InvalidOperationException">
+        /// Thrown when the field storage has not been created.
+        /// </exception>
         /// <remarks>
-        /// The returned array is a non-owning struct copy. Disposing it is equivalent to
-        /// disposing the workspace-owned storage and must be avoided by consumers that do not
-        /// own the workspace lifetime.
+        /// The returned array is a non-owning struct copy. Consumers must not dispose it unless
+        /// they own the workspace storage.
         /// </remarks>
         public NativeArray<T> AsNativeArray()
         {
+            ValidateCreated();
+
             return values;
         }
 
@@ -169,7 +166,7 @@ namespace Lokrain.Burstable.Workspace
         /// </summary>
         /// <param name="valueType">Declared field value type.</param>
         /// <exception cref="ArgumentException">
-        /// Thrown when <paramref name="valueType"/> is not compatible with
+        /// Thrown when <paramref name="valueType"/> is incompatible with
         /// <typeparamref name="T"/>.
         /// </exception>
         /// <exception cref="NotSupportedException">
@@ -188,11 +185,11 @@ namespace Lokrain.Burstable.Workspace
         }
 
         /// <summary>
-        /// Gets the declared map field value type expected for <typeparamref name="T"/>.
+        /// Gets the declared field value type expected for <typeparamref name="T"/>.
         /// </summary>
-        /// <returns>The expected map field value type.</returns>
+        /// <returns>The expected field value type.</returns>
         /// <exception cref="NotSupportedException">
-        /// Thrown when <typeparamref name="T"/> is not supported as a map field element type.
+        /// Thrown when <typeparamref name="T"/> is not supported by the workspace layer.
         /// </exception>
         private static MapFieldValueType GetExpectedValueType()
         {

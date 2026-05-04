@@ -9,15 +9,18 @@ namespace Lokrain.Burstable.Workspace
     /// Owns native storage for generated map fields.
     /// </summary>
     /// <remarks>
-    /// A map workspace owns the generated field arrays for one rectangular map. Field storage is
+    /// A map workspace owns generated field arrays for one rectangular map. Field storage is
     /// allocated from a validated <see cref="MapFieldRegistry"/> and has one element per tile.
     ///
-    /// This type is the lifetime owner for native field memory. Field views returned by this
-    /// workspace are non-owning handles and must not be used after the workspace is disposed.
+    /// Field views returned by this workspace are non-owning handles and must not be used after
+    /// the workspace is disposed.
     ///
-    /// The workspace is managed setup/runtime infrastructure. It is not intended to be captured
-    /// by Burst-compiled jobs. Resolve the required <see cref="MapField{T}"/> values first and
-    /// pass their underlying native arrays to jobs.
+    /// The workspace is managed setup/runtime infrastructure. It should not be captured by
+    /// Burst-compiled jobs. Resolve required fields on the managed side and pass their native
+    /// arrays to jobs.
+    ///
+    /// Workspace allocation supports <see cref="Allocator.Persistent"/> and
+    /// <see cref="Allocator.TempJob"/>. <see cref="Allocator.Temp"/> is intentionally rejected.
     /// </remarks>
     public sealed class MapWorkspace : IDisposable
     {
@@ -33,20 +36,15 @@ namespace Lokrain.Burstable.Workspace
         /// <param name="fieldRegistry">Registry containing field definitions to allocate.</param>
         /// <param name="allocator">Allocator used for native field storage.</param>
         /// <exception cref="ArgumentNullException">
-        /// Thrown when <paramref name="fieldRegistry"/> is null.
+        /// Thrown when <paramref name="fieldRegistry"/> is <see langword="null"/>.
         /// </exception>
         /// <exception cref="ArgumentOutOfRangeException">
         /// Thrown when <paramref name="dimensions"/> are invalid.
         /// </exception>
         /// <exception cref="ArgumentException">
-        /// Thrown when <paramref name="allocator"/> is not valid for native storage allocation,
-        /// or when the registry contains an unsupported field value type.
+        /// Thrown when <paramref name="allocator"/> is unsupported or when the registry
+        /// contains an unsupported field value type.
         /// </exception>
-        /// <remarks>
-        /// Field storage is clear-initialized. Generation stages should still write every field
-        /// value they own; clear initialization is a safety baseline, not a substitute for stage
-        /// ownership.
-        /// </remarks>
         public MapWorkspace(
             MapDimensions dimensions,
             MapFieldRegistry fieldRegistry,
@@ -60,8 +58,8 @@ namespace Lokrain.Burstable.Workspace
             Dimensions = dimensions;
             Allocator = allocator;
 
-            int32Fields = new Dictionary<int, NativeArray<int>>();
-            uint8Fields = new Dictionary<int, NativeArray<byte>>();
+            int32Fields = new Dictionary<int, NativeArray<int>>(FieldRegistry.Count);
+            uint8Fields = new Dictionary<int, NativeArray<byte>>(FieldRegistry.Count);
 
             try
             {
@@ -118,6 +116,24 @@ namespace Lokrain.Burstable.Workspace
         }
 
         /// <summary>
+        /// Determines whether this workspace contains storage for the specified field name.
+        /// </summary>
+        /// <param name="name">Stable symbolic field name.</param>
+        /// <returns>
+        /// <see langword="true"/> when the workspace contains the field; otherwise,
+        /// <see langword="false"/>.
+        /// </returns>
+        /// <exception cref="ObjectDisposedException">
+        /// Thrown when this workspace has been disposed.
+        /// </exception>
+        public bool ContainsName(string name)
+        {
+            ThrowIfDisposed();
+
+            return FieldRegistry.ContainsName(name);
+        }
+
+        /// <summary>
         /// Gets a signed 32-bit integer field view by field identifier.
         /// </summary>
         /// <param name="id">Field identifier.</param>
@@ -135,6 +151,9 @@ namespace Lokrain.Burstable.Workspace
         /// Thrown when the requested field is not an <see cref="MapFieldValueType.Int32"/>
         /// field.
         /// </exception>
+        /// <exception cref="InvalidOperationException">
+        /// Thrown when registry metadata and allocated storage are inconsistent.
+        /// </exception>
         public MapField<int> GetInt32Field(MapFieldId id)
         {
             ThrowIfDisposed();
@@ -142,10 +161,16 @@ namespace Lokrain.Burstable.Workspace
             MapFieldDefinition definition = FieldRegistry.Get(id);
             ValidateRequestedValueType(definition, MapFieldValueType.Int32);
 
+            if (!int32Fields.TryGetValue(definition.Id.Value, out NativeArray<int> values))
+            {
+                throw new InvalidOperationException(
+                    "Map workspace does not contain native storage for the requested Int32 field.");
+            }
+
             return new MapField<int>(
                 definition.Id,
                 definition.ValueType,
-                int32Fields[definition.Id.Value]);
+                values);
         }
 
         /// <summary>
@@ -166,6 +191,9 @@ namespace Lokrain.Burstable.Workspace
         /// Thrown when the requested field is not an <see cref="MapFieldValueType.UInt8"/>
         /// field.
         /// </exception>
+        /// <exception cref="InvalidOperationException">
+        /// Thrown when registry metadata and allocated storage are inconsistent.
+        /// </exception>
         public MapField<byte> GetUInt8Field(MapFieldId id)
         {
             ThrowIfDisposed();
@@ -173,10 +201,16 @@ namespace Lokrain.Burstable.Workspace
             MapFieldDefinition definition = FieldRegistry.Get(id);
             ValidateRequestedValueType(definition, MapFieldValueType.UInt8);
 
+            if (!uint8Fields.TryGetValue(definition.Id.Value, out NativeArray<byte> values))
+            {
+                throw new InvalidOperationException(
+                    "Map workspace does not contain native storage for the requested UInt8 field.");
+            }
+
             return new MapField<byte>(
                 definition.Id,
                 definition.ValueType,
-                uint8Fields[definition.Id.Value]);
+                values);
         }
 
         /// <summary>
@@ -255,9 +289,8 @@ namespace Lokrain.Burstable.Workspace
         /// Disposes all native field storage owned by this workspace.
         /// </summary>
         /// <remarks>
-        /// Existing field views become invalid after this method completes. Consumers must not
-        /// read from, write to, schedule jobs against, or dispose field views after the owning
-        /// workspace has been disposed.
+        /// All jobs using arrays from this workspace must be completed before disposal.
+        /// Existing field views become invalid after disposal.
         /// </remarks>
         public void Dispose()
         {
@@ -273,7 +306,7 @@ namespace Lokrain.Burstable.Workspace
         }
 
         /// <summary>
-        /// Allocates native storage for every field definition in the registry.
+        /// Allocates native storage for every registered field definition.
         /// </summary>
         /// <exception cref="ArgumentException">
         /// Thrown when a registered field uses an unsupported value type.
@@ -312,7 +345,7 @@ namespace Lokrain.Burstable.Workspace
         }
 
         /// <summary>
-        /// Disposes all native arrays that have been allocated by this workspace.
+        /// Disposes all native arrays allocated by this workspace.
         /// </summary>
         private void DisposeAllocatedFields()
         {
@@ -337,19 +370,20 @@ namespace Lokrain.Burstable.Workspace
         }
 
         /// <summary>
-        /// Validates that an allocator can be used for native field storage.
+        /// Validates that an allocator can be used for workspace-owned native field storage.
         /// </summary>
         /// <param name="allocator">Allocator to validate.</param>
         /// <exception cref="ArgumentException">
-        /// Thrown when <paramref name="allocator"/> is <see cref="Unity.Collections.Allocator.Invalid"/>
-        /// or <see cref="Unity.Collections.Allocator.None"/>.
+        /// Thrown when <paramref name="allocator"/> is not <see cref="Allocator.Persistent"/>
+        /// or <see cref="Allocator.TempJob"/>.
         /// </exception>
         private static void ValidateAllocator(Allocator allocator)
         {
-            if (allocator == Allocator.Invalid || allocator == Allocator.None)
+            if (allocator != Allocator.Persistent &&
+                allocator != Allocator.TempJob)
             {
                 throw new ArgumentException(
-                    "Map workspace allocator must support native storage allocation.",
+                    "Map workspace allocator must be Persistent or TempJob.",
                     nameof(allocator));
             }
         }
@@ -358,7 +392,7 @@ namespace Lokrain.Burstable.Workspace
         /// Validates that a field definition has the requested value type.
         /// </summary>
         /// <param name="definition">Field definition to validate.</param>
-        /// <param name="expectedValueType">Expected field value type.</param>
+        /// <param name="expectedValueType">Expected value type.</param>
         /// <exception cref="ArgumentException">
         /// Thrown when the definition value type does not match
         /// <paramref name="expectedValueType"/>.

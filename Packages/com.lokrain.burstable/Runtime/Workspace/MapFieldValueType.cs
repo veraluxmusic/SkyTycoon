@@ -4,17 +4,19 @@ namespace Lokrain.Burstable.Workspace
     /// Identifies the stored value type of a generated map field.
     /// </summary>
     /// <remarks>
-    /// Map field value types are metadata used by field definitions, registries, workspaces,
-    /// validation, previews, and exporters.
+    /// Map field value types are storage metadata used by field definitions, registries,
+    /// workspaces, validation, previews, exporters, diagnostics, and tooling.
     ///
-    /// This value does not allocate storage, convert data, own field memory, or describe a
-    /// field's semantic meaning. Semantic meaning belongs to <see cref="MapFieldDefinition"/>.
+    /// This value does not allocate storage, convert data, own field memory, validate field
+    /// length, or describe a field's semantic meaning. Semantic meaning belongs to the feature,
+    /// generation stage, preview, exporter, or consumer that owns the field contract.
     ///
     /// The value zero is reserved for <see cref="Invalid"/>. Valid field definitions must use
     /// a supported non-zero value type.
     ///
-    /// Existing value meanings are part of the workspace contract. Adding new values is safe;
-    /// changing the meaning of an existing value should be treated as a package contract break.
+    /// Adding a new value type requires updating workspace allocation, typed accessors, tests,
+    /// and documentation together. Changing the meaning of an existing value is a package
+    /// contract break.
     /// </remarks>
     public enum MapFieldValueType : byte
     {
@@ -27,8 +29,9 @@ namespace Lokrain.Burstable.Workspace
         /// Signed 32-bit integer field values.
         /// </summary>
         /// <remarks>
-        /// Use this for deterministic scalar fields such as elevation, moisture, temperature,
-        /// masks, costs, and fixed-point intermediate generation data.
+        /// Use this for deterministic scalar fields such as elevation, temperature, moisture,
+        /// costs, masks, fixed-point intermediate values, and generated numeric data that
+        /// should avoid floating-point platform variance.
         /// </remarks>
         Int32 = 1,
 
@@ -37,7 +40,7 @@ namespace Lokrain.Burstable.Workspace
         /// </summary>
         /// <remarks>
         /// Use this for compact categorical fields such as terrain kinds, biome kinds, flags,
-        /// and low-cardinality classifications.
+        /// masks, and low-cardinality classifications.
         /// </remarks>
         UInt8 = 2
     }
